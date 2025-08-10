@@ -1,6 +1,6 @@
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, PhotoSize, Location
-from aiogram.filters import Command, StateFilter
+from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from database import Database
@@ -12,7 +12,9 @@ from utils.keyboards import (
     get_profile_keyboard, 
     get_location_keyboard,
     get_main_menu_keyboard,
-    get_swipe_keyboard
+    get_swipe_keyboard,
+    get_back_to_menu_reply_keyboard,
+    get_main_menu_reply_keyboard_with_likes
 )
 from utils.validators import *
 from utils.ai_helper import ai_helper
@@ -50,10 +52,13 @@ class ProfileStates(StatesGroup):
     waiting_for_photo = State()
     editing_field = State()
 
-@router.callback_query(F.data.startswith("gender_"), StateFilter(None))
+@router.callback_query(F.data.startswith("gender_"))
 async def process_gender_selection(callback: CallbackQuery, state: FSMContext, db: Database):
     """Обработка выбора пола (только при создании нового профиля)"""
     await callback.answer()
+    
+    # Очищаем состояние на всякий случай
+    await state.clear()
     
     gender = callback.data.split("_")[1]  # male или female
     user_id = callback.from_user.id
@@ -69,7 +74,7 @@ async def process_gender_selection(callback: CallbackQuery, state: FSMContext, d
         reply_markup=get_looking_for_keyboard()
     )
 
-@router.callback_query(F.data.startswith("looking_"), StateFilter(None))
+@router.callback_query(F.data.startswith("looking_"))
 async def process_looking_for_selection(callback: CallbackQuery, state: FSMContext, db: Database):
     """Обработка выбора предпочтений (только при создании нового профиля)"""
     await callback.answer()
@@ -295,13 +300,15 @@ async def finalize_profile_creation(message, state: FSMContext, db: Database, us
         logger.error(f"User {user_id} not found in database during profile finalization!")
         await message.answer(
             "❌ Ошибка при создании анкеты. Попробуй еще раз.",
-            reply_markup=get_main_menu_keyboard(has_profile=False)
+            reply_markup=get_main_menu_reply_keyboard_with_likes(db, user_id, has_profile=False)
         )
         return
     
     # Показываем готовую анкету
     await show_user_profile(message, db, user_id, is_own=True)
     
+    # Получаем reply клавиатуру с лайками
+    keyboard = await get_main_menu_reply_keyboard_with_likes(db, user_id, has_profile=True)
     await message.answer(
         "🎉 <b>Отлично! Твоя анкета готова!</b>\n\n"
         "Теперь ты можешь:\n"
@@ -310,7 +317,7 @@ async def finalize_profile_creation(message, state: FSMContext, db: Database, us
         "• Добавить еще фотографий\n"
         "• Настроить фильтры поиска",
         parse_mode="HTML",
-        reply_markup=get_main_menu_keyboard(has_profile=True)
+        reply_markup=keyboard
     )
 
 async def show_user_profile(message: Message, db: Database, user_id: int, is_own: bool = False, edit_message: bool = False, for_swipe: bool = False):

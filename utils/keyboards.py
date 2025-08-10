@@ -1,5 +1,5 @@
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 from typing import List, Optional
 
 async def get_main_menu_keyboard_with_likes(db, user_id: int, has_profile: bool = False) -> InlineKeyboardMarkup:
@@ -126,7 +126,7 @@ def get_swipe_keyboard(user_id: int) -> InlineKeyboardMarkup:
         InlineKeyboardButton(text="👎 Пас", callback_data=f"dislike_{user_id}")
     )
     builder.row(
-        InlineKeyboardButton(text="⏭️ Следующий", callback_data="next_profile"),
+        InlineKeyboardButton(text="⏭️ Следующий", callback_data=f"next_profile_{user_id}"),
         InlineKeyboardButton(text="🔙 В меню", callback_data="main_menu")
     )
     return builder.as_markup()
@@ -414,3 +414,55 @@ def get_set_main_photo_keyboard(photos: list) -> InlineKeyboardMarkup:
     # Делаем максимум 2 кнопки в ряду
     builder.adjust(2)
     return builder.as_markup()
+
+# ======== REPLY КЛАВИАТУРЫ ========
+
+def get_main_menu_reply_keyboard(has_profile: bool = False, unread_likes_count: int = 0) -> ReplyKeyboardMarkup:
+    """Главное меню бота (reply клавиатура)"""
+    builder = ReplyKeyboardBuilder()
+    
+    if has_profile:
+        # Формируем текст для кнопки лайков
+        likes_text = "💌 Лайки"
+        if unread_likes_count > 0:
+            likes_text = f"💌 Лайки ({unread_likes_count})"
+        
+        builder.row(
+            KeyboardButton(text="👀 Смотреть анкеты"),
+            KeyboardButton(text=likes_text)
+        )
+        builder.row(
+            KeyboardButton(text="📝 Моя анкета"),
+            KeyboardButton(text="⚙️ Настройки")
+        )
+        builder.row(
+            KeyboardButton(text="📊 Статистика"),
+            KeyboardButton(text="ℹ️ О боте")
+        )
+    else:
+        builder.row(
+            KeyboardButton(text="📝 Создать анкету")
+        )
+        builder.row(
+            KeyboardButton(text="ℹ️ О боте")
+        )
+    
+    return builder.as_markup(resize_keyboard=True, one_time_keyboard=False)
+
+async def get_main_menu_reply_keyboard_with_likes(db, user_id: int, has_profile: bool = False) -> ReplyKeyboardMarkup:
+    """Главное меню бота с автоматическим подсчетом лайков (reply клавиатура)"""
+    unread_likes_count = 0
+    if has_profile:
+        try:
+            unread_likes_count = await db.get_unread_likes_count(user_id)
+        except Exception:
+            unread_likes_count = 0
+    return get_main_menu_reply_keyboard(has_profile, unread_likes_count)
+
+def get_back_to_menu_reply_keyboard() -> ReplyKeyboardMarkup:
+    """Простая reply клавиатура возврата в меню"""
+    builder = ReplyKeyboardBuilder()
+    builder.row(
+        KeyboardButton(text="🔙 В меню")
+    )
+    return builder.as_markup(resize_keyboard=True, one_time_keyboard=False)

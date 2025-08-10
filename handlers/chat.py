@@ -115,7 +115,7 @@ async def show_like_profile(message, db: Database, user_id: int, like_index: int
         # Без фото
         await safe_edit_message(message, text=profile_text, reply_markup=keyboard)
 
-@router.callback_query(F.data.startswith("like_response_"))
+@router.callback_query(F.data.regexp(r"^like_response_(like|dislike)_\d+_\d+$"))
 async def handle_like_response(callback: CallbackQuery, db: Database):
     """Обработка ответа на лайк"""
     await callback.answer()
@@ -187,10 +187,10 @@ async def handle_like_response(callback: CallbackQuery, db: Database):
     # Показываем следующий лайк
     await show_like_profile(callback.message, db, user_id, like_index + 1)
 
-@router.callback_query(F.data.startswith("skip_like_"))
+@router.callback_query(F.data.regexp(r"^skip_like_\d+$"))
 async def skip_like(callback: CallbackQuery, db: Database):
     """Пропустить просмотр лайка"""
-    await callback.answer()
+    await callback.answer("⏭️")
     
     # Парсим индекс: skip_like_{like_index}
     like_index = int(callback.data.split("_")[2])

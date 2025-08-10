@@ -180,16 +180,17 @@ async def process_dislike(callback: CallbackQuery, db: Database):
     # Показываем следующую анкету
     await show_next_profile(callback.message, db, user_id)
 
-@router.callback_query(F.data == "next_profile")
+@router.callback_query(F.data.regexp(r"^next_profile_\d+$"))
 async def show_next_profile_callback(callback: CallbackQuery, db: Database):
     """Показать следующую анкету через кнопку (без сохранения как дислайк)"""
     await callback.answer("⏭️")
     
     user_id = callback.from_user.id
+    exclude_user_id = int(callback.data.split("_")[2])
     
-    # Просто показываем следующую анкету БЕЗ сохранения в базу
-    # Этот пользователь может снова показаться в будущем
-    await show_next_profile(callback.message, db, user_id)
+    # Показываем следующую анкету БЕЗ сохранения в базу
+    # Исключаем текущего пользователя, чтобы не показать его снова
+    await show_next_profile(callback.message, db, user_id, exclude_user_id=exclude_user_id)
 
 @router.callback_query(F.data.startswith("report_"))
 async def report_user(callback: CallbackQuery, db: Database):
