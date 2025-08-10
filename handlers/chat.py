@@ -2,46 +2,12 @@ from aiogram import Router, F
 from aiogram.types import CallbackQuery, Message, InputMediaPhoto
 from database import Database
 from utils.keyboards import get_main_menu_keyboard, get_like_response_keyboard
+from utils.message_utils import safe_edit_message, safe_answer_message
 import logging
 
 logger = logging.getLogger(__name__)
 
 router = Router()
-
-async def safe_edit_message(message, text: str = None, media=None, reply_markup=None, parse_mode="HTML"):
-    """Безопасное редактирование сообщения с fallback"""
-    try:
-        if media:
-            await message.edit_media(
-                media=media,
-                reply_markup=reply_markup
-            )
-        elif text:
-            await message.edit_text(
-                text=text,
-                parse_mode=parse_mode,
-                reply_markup=reply_markup
-            )
-    except:
-        # Если не удалось редактировать, удаляем и отправляем новое
-        try:
-            await message.delete()
-        except:
-            pass
-        
-        if media and hasattr(media, 'media'):
-            await message.answer_photo(
-                photo=media.media,
-                caption=media.caption,
-                parse_mode=parse_mode,
-                reply_markup=reply_markup
-            )
-        elif text:
-            await message.answer(
-                text=text,
-                parse_mode=parse_mode,
-                reply_markup=reply_markup
-            )
 
 @router.callback_query(F.data == "my_chats")
 async def show_incoming_likes(callback: CallbackQuery, db: Database):

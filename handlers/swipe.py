@@ -4,6 +4,7 @@ from database import Database
 from handlers.profile import show_user_profile
 from utils.keyboards import get_swipe_keyboard, get_main_menu_keyboard
 from utils.ai_helper import ai_helper
+from utils.message_utils import safe_edit_message, safe_answer_message
 import logging
 
 logger = logging.getLogger(__name__)
@@ -20,8 +21,9 @@ async def start_swiping(callback: CallbackQuery, db: Database):
     # Проверяем, что у пользователя есть анкета
     user = await db.get_user(user_id)
     if not user or not user.name or not user.age or not user.gender:
-        await callback.message.edit_text(
-            "❌ Сначала создай свою анкету!",
+        await safe_edit_message(
+            callback.message,
+            text="❌ Сначала создай свою анкету!",
             reply_markup=get_main_menu_keyboard(has_profile=False)
         )
         return
@@ -156,11 +158,10 @@ async def process_like(callback: CallbackQuery, db: Database):
             logger.error(f"Failed to send match notification to user {target_user_id}: {e}")
         
         from utils.keyboards import get_back_to_menu_keyboard
-        await callback.message.edit_text(
-            match_text,
-            parse_mode="HTML",
-            reply_markup=get_back_to_menu_keyboard(),
-            disable_web_page_preview=True
+        await safe_edit_message(
+            callback.message,
+            text=match_text,
+            reply_markup=get_back_to_menu_keyboard()
         )
     else:
         # Показываем следующую анкету
@@ -201,11 +202,11 @@ async def report_user(callback: CallbackQuery, db: Database):
     
     # TODO: Реализовать систему жалоб
     # Пока просто показываем сообщение
-    await callback.message.edit_text(
-        "📊 <b>Жалоба отправлена</b>\n\n"
-        "Мы рассмотрим вашу жалобу в ближайшее время.\n"
-        "Спасибо за помощь в поддержании безопасности сообщества!",
-        parse_mode="HTML",
+    await safe_edit_message(
+        callback.message,
+        text="📊 <b>Жалоба отправлена</b>\n\n"
+             "Мы рассмотрим вашу жалобу в ближайшее время.\n"
+             "Спасибо за помощь в поддержании безопасности сообщества!",
         reply_markup=get_main_menu_keyboard(has_profile=True)
     )
     

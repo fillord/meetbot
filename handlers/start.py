@@ -12,29 +12,10 @@ from utils.keyboards import (
     get_main_menu_reply_keyboard_with_likes
 )
 from utils.profile_utils import is_profile_complete
+from utils.message_utils import safe_edit_message, safe_answer_message
 from config import Config
 
 router = Router()
-
-async def safe_edit_message(message, text: str, reply_markup=None, parse_mode="HTML"):
-    """Безопасное редактирование сообщения с fallback"""
-    try:
-        await message.edit_text(
-            text=text,
-            parse_mode=parse_mode,
-            reply_markup=reply_markup
-        )
-    except:
-        # Если не удалось редактировать, удаляем и отправляем новое
-        try:
-            await message.delete()
-        except:
-            pass
-        await message.answer(
-            text=text,
-            parse_mode=parse_mode,
-            reply_markup=reply_markup
-        )
 
 @router.message(CommandStart())
 async def start_command(message: Message, state: FSMContext, db: Database):
@@ -82,8 +63,8 @@ async def start_profile_creation(callback: CallbackQuery, state: FSMContext):
     
     await safe_edit_message(
         callback.message,
-        "🎭 <b>Создание анкеты</b>\n\n"
-        "Сначала выбери свой пол:",
+        text="🎭 <b>Создание анкеты</b>\n\n"
+             "Сначала выбери свой пол:",
         reply_markup=get_gender_keyboard()
     )
 
@@ -140,7 +121,7 @@ async def show_statistics(callback: CallbackQuery, db: Database):
     if not user:
         await safe_edit_message(
             callback.message,
-            "❌ Сначала создайте анкету!",
+            text="❌ Сначала создайте анкету!",
             reply_markup=get_main_menu_keyboard(has_profile=False)
         )
         return
@@ -151,7 +132,7 @@ async def show_statistics(callback: CallbackQuery, db: Database):
     if not stats:
         await safe_edit_message(
             callback.message,
-            "❌ Ошибка получения статистики",
+            text="❌ Ошибка получения статистики",
             reply_markup=get_main_menu_keyboard(has_profile=True)
         )
         return
@@ -204,7 +185,7 @@ async def show_statistics(callback: CallbackQuery, db: Database):
     from utils.keyboards import get_statistics_keyboard
     await safe_edit_message(
         callback.message,
-        stats_text,
+        text=stats_text,
         reply_markup=get_statistics_keyboard()
     )
 
@@ -230,7 +211,7 @@ async def show_about(callback: CallbackQuery):
     from utils.keyboards import get_back_to_menu_keyboard
     await safe_edit_message(
         callback.message,
-        about_text,
+        text=about_text,
         reply_markup=get_back_to_menu_keyboard()
     )
 
@@ -269,7 +250,7 @@ async def show_top_users(callback: CallbackQuery, db: Database):
     from utils.keyboards import get_back_to_menu_keyboard
     await safe_edit_message(
         callback.message,
-        text,
+        text=text,
         reply_markup=get_back_to_menu_keyboard()
     )
 
@@ -343,7 +324,7 @@ async def show_global_statistics(callback: CallbackQuery, db: Database):
     from utils.keyboards import get_back_to_menu_keyboard
     await safe_edit_message(
         callback.message,
-        global_stats_text,
+        text=global_stats_text,
         reply_markup=get_back_to_menu_keyboard()
     )
 
@@ -358,7 +339,7 @@ async def show_profile_recommendations(callback: CallbackQuery, db: Database):
     if not recommendations_data:
         await safe_edit_message(
             callback.message,
-            "❌ Сначала создайте анкету!",
+            text="❌ Сначала создайте анкету!",
             reply_markup=get_main_menu_keyboard(has_profile=False)
         )
         return
@@ -386,7 +367,7 @@ async def show_profile_recommendations(callback: CallbackQuery, db: Database):
     from utils.keyboards import get_back_to_menu_keyboard
     await safe_edit_message(
         callback.message,
-        text,
+        text=text,
         reply_markup=get_back_to_menu_keyboard()
     )
 

@@ -18,6 +18,8 @@ from utils.keyboards import (
 )
 from utils.validators import *
 from utils.ai_helper import ai_helper
+from utils.message_utils import safe_edit_message, safe_answer_message
+from utils.face_detection import validate_profile_photo
 from config import Config
 import logging
 import aiohttp
@@ -67,10 +69,10 @@ async def process_gender_selection(callback: CallbackQuery, state: FSMContext, d
     await db.create_or_update_user(user_id, gender=gender)
     
     # Переходим к выбору предпочтений
-    await callback.message.edit_text(
-        "❤️ <b>Кого ты ищешь?</b>\n\n"
-        "Выбери, кто тебе интересен для знакомства:",
-        parse_mode="HTML",
+    await safe_edit_message(
+        callback.message,
+        text="❤️ <b>Кого ты ищешь?</b>\n\n"
+             "Выбери, кто тебе интересен для знакомства:",
         reply_markup=get_looking_for_keyboard()
     )
 
@@ -87,10 +89,10 @@ async def process_looking_for_selection(callback: CallbackQuery, state: FSMConte
     
     # Переходим к вводу имени
     await state.set_state(ProfileStates.waiting_for_name)
-    await callback.message.edit_text(
-        "📝 <b>Как тебя зовут?</b>\n\n"
-        "Напиши свое имя (или как ты хочешь, чтобы тебя называли):",
-        parse_mode="HTML",
+    await safe_edit_message(
+        callback.message,
+        text="📝 <b>Как тебя зовут?</b>\n\n"
+             "Напиши свое имя (или как ты хочешь, чтобы тебя называли):",
         reply_markup=get_back_to_menu_keyboard()
     )
 
@@ -417,8 +419,37 @@ async def process_photo_input(message: Message, state: FSMContext, db: Database)
         await finalize_profile_creation(message, state, db, user_id)
         return
     
-    # Добавляем фото
-    is_main = len(existing_photos) == 0  # Первое фото становится главным
+    # Определяем, является ли это главным фото
+    is_main = len(existing_photos) == 0
+    
+    # Отправляем сообщение о проверке фото
+    checking_msg = await message.answer("🔍 Проверяю фото...")
+    
+    # Проверяем наличие лица на фото
+    is_valid, validation_message = await validate_profile_photo(
+        bot=message.bot,
+        file_id=photo.file_id,
+        is_main_photo=is_main
+    )
+    
+    # Удаляем сообщение о проверке
+    try:
+        await checking_msg.delete()
+    except:
+        pass
+    
+    if not is_valid:
+        # Фото не прошло проверку
+        await message.answer(
+            f"{validation_message}\n\n"
+            f"{'🔸 Для главного фото' if is_main else '🔸 Для лучшего результата'} "
+            f"используй фото где четко видно только твое лицо.\n\n"
+            f"Попробуй загрузить другое фото:",
+            reply_markup=get_photo_add_keyboard()
+        )
+        return
+    
+    # Добавляем фото в базу данных
     logger.info(f"Adding photo for user {user_id}, is_main: {is_main}")
     
     await db.add_user_photo(
@@ -436,21 +467,21 @@ async def process_photo_input(message: Message, state: FSMContext, db: Database)
     
     if current_count == 1:
         await message.answer(
-            f"✅ Главное фото добавлено!\n\n"
+            f"{validation_message}\n\n"
             f"📸 У тебя {current_count} из {max_photos} фото\n\n"
             f"Можешь добавить еще фото или завершить создание анкеты:",
             reply_markup=get_photo_add_keyboard()
         )
     elif current_count < max_photos:
         await message.answer(
-            f"✅ Фото добавлено!\n\n"
+            f"{validation_message}\n\n"
             f"📸 У тебя {current_count} из {max_photos} фото\n\n"
             f"Можешь добавить еще фото или завершить создание анкеты:",
             reply_markup=get_photo_add_keyboard()
         )
     else:
         # Достигнут лимит фото - завершаем создание профиля
-        await message.answer(f"✅ Фото добавлено! Достигнут лимит ({max_photos} фото)")
+        await message.answer(f"{validation_message}\n\nДостигнут лимит ({max_photos} фото)")
         await finalize_profile_creation(message, state, db, user_id)
 
 @router.message(ProfileStates.waiting_for_photo)
@@ -465,10 +496,10 @@ async def process_invalid_photo(message: Message):
 async def continue_adding_photos(callback: CallbackQuery):
     """Продолжить добавление фотографий"""
     await callback.answer()
-    await callback.message.edit_text(
-        "📸 <b>Добавь еще фото</b>\n\n"
-        "Пришли следующую фотографию для твоей анкеты.",
-        parse_mode="HTML",
+    await safe_edit_message(
+        callback.message,
+        text="📸 <b>Добавь еще фото</b>\n\n"
+             "Пришли следующую фотографию для твоей анкеты.",
         reply_markup=get_photo_add_keyboard()
     )
 

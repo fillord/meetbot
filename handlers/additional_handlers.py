@@ -11,6 +11,8 @@ from utils.keyboards import (
     get_back_to_profile_keyboard
 )
 from handlers.profile import ProfileStates
+from utils.face_detection import validate_profile_photo
+from utils.message_utils import safe_edit_message, safe_answer_message
 import logging
 
 logger = logging.getLogger(__name__)
@@ -24,46 +26,26 @@ async def edit_name_handler(callback: CallbackQuery, state: FSMContext, db: Data
     """Обработчик редактирования имени"""
     await callback.answer()
     
-    try:
-        await callback.message.edit_text(
-            "✏️ <b>Изменение имени</b>\n\n"
-            "Введи новое имя (от 2 до 30 символов):",
-            parse_mode="HTML",
-            reply_markup=get_back_to_menu_keyboard()
-        )
-        await state.set_state(ProfileStates.waiting_for_name)
-    except Exception as e:
-        logger.error(f"Error editing name: {e}")
-        await callback.message.answer(
-            "✏️ <b>Изменение имени</b>\n\n"
-            "Введи новое имя (от 2 до 30 символов):",
-            parse_mode="HTML",
-            reply_markup=get_back_to_menu_keyboard()
-        )
-        await state.set_state(ProfileStates.waiting_for_name)
+    await safe_edit_message(
+        callback.message,
+        text="✏️ <b>Изменение имени</b>\n\n"
+             "Введи новое имя (от 2 до 30 символов):",
+        reply_markup=get_back_to_menu_keyboard()
+    )
+    await state.set_state(ProfileStates.waiting_for_name)
 
 @router.callback_query(F.data == "edit_age")
 async def edit_age_handler(callback: CallbackQuery, state: FSMContext, db: Database):
     """Обработчик редактирования возраста"""
     await callback.answer()
     
-    try:
-        await callback.message.edit_text(
-            "🎂 <b>Изменение возраста</b>\n\n"
-            "Укажи свой возраст (от 18 до 100 лет):",
-            parse_mode="HTML",
-            reply_markup=get_back_to_menu_keyboard()
-        )
-        await state.set_state(ProfileStates.waiting_for_age)
-    except Exception as e:
-        logger.error(f"Error editing age: {e}")
-        await callback.message.answer(
-            "🎂 <b>Изменение возраста</b>\n\n"
-            "Укажи свой возраст (от 18 до 100 лет):",
-            parse_mode="HTML",
-            reply_markup=get_back_to_menu_keyboard()
-        )
-        await state.set_state(ProfileStates.waiting_for_age)
+    await safe_edit_message(
+        callback.message,
+        text="🎂 <b>Изменение возраста</b>\n\n"
+             "Укажи свой возраст (от 18 до 100 лет):",
+        reply_markup=get_back_to_menu_keyboard()
+    )
+    await state.set_state(ProfileStates.waiting_for_age)
 
 @router.callback_query(F.data == "edit_bio")
 async def edit_bio_handler(callback: CallbackQuery, state: FSMContext, db: Database):
@@ -74,48 +56,27 @@ async def edit_bio_handler(callback: CallbackQuery, state: FSMContext, db: Datab
     user = await db.get_user(user_id)
     current_bio = user.bio if user and user.bio else "Не указано"
     
-    try:
-        await callback.message.edit_text(
-            f"📝 <b>Изменение описания</b>\n\n"
-            f"Текущее описание: <i>{current_bio}</i>\n\n"
-            f"Введи новое описание о себе (до 500 символов):",
-            parse_mode="HTML",
-            reply_markup=get_back_to_menu_keyboard()
-        )
-        await state.set_state(ProfileStates.waiting_for_bio)
-    except Exception as e:
-        logger.error(f"Error editing bio: {e}")
-        await callback.message.answer(
-            f"📝 <b>Изменение описания</b>\n\n"
-            f"Текущее описание: <i>{current_bio}</i>\n\n"
-            f"Введи новое описание о себе (до 500 символов):",
-            parse_mode="HTML",
-            reply_markup=get_back_to_menu_keyboard()
-        )
-        await state.set_state(ProfileStates.waiting_for_bio)
+    await safe_edit_message(
+        callback.message,
+        text=f"📝 <b>Изменение описания</b>\n\n"
+             f"Текущее описание: <i>{current_bio}</i>\n\n"
+             f"Введи новое описание о себе (до 500 символов):",
+        reply_markup=get_back_to_menu_keyboard()
+    )
+    await state.set_state(ProfileStates.waiting_for_bio)
 
 @router.callback_query(F.data == "edit_location")
 async def edit_location_handler(callback: CallbackQuery, state: FSMContext, db: Database):
     """Обработчик редактирования города"""
     await callback.answer()
     
-    try:
-        await callback.message.edit_text(
-            "🌆 <b>Изменение города</b>\n\n"
-            "Укажи свой город:",
-            parse_mode="HTML",
-            reply_markup=get_back_to_menu_keyboard()
-        )
-        await state.set_state(ProfileStates.waiting_for_location)
-    except Exception as e:
-        logger.error(f"Error editing location: {e}")
-        await callback.message.answer(
-            "🌆 <b>Изменение города</b>\n\n"
-            "Укажи свой город:",
-            parse_mode="HTML",
-            reply_markup=get_back_to_menu_keyboard()
-        )
-        await state.set_state(ProfileStates.waiting_for_location)
+    await safe_edit_message(
+        callback.message,
+        text="🌆 <b>Изменение города</b>\n\n"
+             "Укажи свой город:",
+        reply_markup=get_back_to_menu_keyboard()
+    )
+    await state.set_state(ProfileStates.waiting_for_location)
 
 @router.callback_query(F.data == "manage_photos")
 async def manage_photos_handler(callback: CallbackQuery, db: Database):
@@ -127,23 +88,17 @@ async def manage_photos_handler(callback: CallbackQuery, db: Database):
     
     from utils.keyboards import get_photo_management_keyboard
     
-    try:
-        await callback.message.edit_text(
-            f"📸 <b>Управление фотографиями</b>\n\n"
-            f"У тебя {len(photos)} фото из 5 возможных\n\n"
-            f"Что хочешь сделать?",
-            parse_mode="HTML",
-            reply_markup=get_photo_management_keyboard()
-        )
-    except Exception as e:
-        logger.error(f"Error managing photos: {e}")
-        await callback.message.answer(
-            f"📸 <b>Управление фотографиями</b>\n\n"
-            f"У тебя {len(photos)} фото из 5 возможных\n\n"
-            f"Что хочешь сделать?",
-            parse_mode="HTML",
-            reply_markup=get_photo_management_keyboard()
-        )
+    text = (
+        f"📸 <b>Управление фотографиями</b>\n\n"
+        f"У тебя {len(photos)} фото из 5 возможных\n\n"
+        f"Что хочешь сделать?"
+    )
+    
+    await safe_edit_message(
+        callback.message,
+        text=text,
+        reply_markup=get_photo_management_keyboard()
+    )
 
 @router.callback_query(F.data == "add_photo")
 async def add_photo_handler(callback: CallbackQuery, state: FSMContext, db: Database):
@@ -154,41 +109,22 @@ async def add_photo_handler(callback: CallbackQuery, state: FSMContext, db: Data
     photos = await db.get_user_photos(user_id)
     
     if len(photos) >= 5:
-        try:
-            await callback.message.edit_text(
-                "❌ <b>Достигнут лимит</b>\n\n"
-                "У тебя уже максимальное количество фото (5).\n"
-                "Сначала удали одно из существующих.",
-                parse_mode="HTML",
-                reply_markup=get_photos_keyboard(len(photos))
-            )
-        except Exception as e:
-            await callback.message.answer(
-                "❌ <b>Достигнут лимит</b>\n\n"
-                "У тебя уже максимальное количество фото (5).\n"
-                "Сначала удали одно из существующих.",
-                parse_mode="HTML",
-                reply_markup=get_photos_keyboard(len(photos))
-            )
+        await safe_edit_message(
+            callback.message,
+            text="❌ <b>Достигнут лимит</b>\n\n"
+                 "У тебя уже максимальное количество фото (5).\n"
+                 "Сначала удали одно из существующих.",
+            reply_markup=get_photos_keyboard(len(photos))
+        )
         return
     
-    try:
-        await callback.message.edit_text(
-            "📸 <b>Добавление фото</b>\n\n"
-            "Отправь фотографию, которую хочешь добавить в анкету:",
-            parse_mode="HTML",
-            reply_markup=get_back_to_menu_keyboard()
-        )
-        await state.set_state(PhotoStates.adding_photo)
-    except Exception as e:
-        logger.error(f"Error adding photo: {e}")
-        await callback.message.answer(
-            "📸 <b>Добавление фото</b>\n\n"
-            "Отправь фотографию, которую хочешь добавить в анкету:",
-            parse_mode="HTML",
-            reply_markup=get_back_to_menu_keyboard()
-        )
-        await state.set_state(PhotoStates.adding_photo)
+    await safe_edit_message(
+        callback.message,
+        text="📸 <b>Добавление фото</b>\n\n"
+             "Отправь фотографию, которую хочешь добавить в анкету:",
+        reply_markup=get_back_to_menu_keyboard()
+    )
+    await state.set_state(PhotoStates.adding_photo)
 
 @router.message(PhotoStates.adding_photo, F.photo)
 async def process_add_photo(message: Message, state: FSMContext, db: Database):
@@ -208,6 +144,32 @@ async def process_add_photo(message: Message, state: FSMContext, db: Database):
         await state.clear()
         return
     
+    # Отправляем сообщение о проверке фото
+    checking_msg = await message.answer("🔍 Проверяю фото...")
+    
+    # Проверяем наличие лица на фото (для дополнительных фото менее строгие требования)
+    is_valid, validation_message = await validate_profile_photo(
+        bot=message.bot,
+        file_id=photo.file_id,
+        is_main_photo=False  # Дополнительное фото, менее строгие требования
+    )
+    
+    # Удаляем сообщение о проверке
+    try:
+        await checking_msg.delete()
+    except:
+        pass
+    
+    if not is_valid:
+        # Фото не прошло проверку
+        await message.answer(
+            f"{validation_message}\n\n"
+            f"🔸 Для лучшего результата используй фото где четко видно лицо.\n\n"
+            f"Попробуй загрузить другое фото:",
+            reply_markup=get_back_to_menu_keyboard()
+        )
+        return
+    
     # Добавляем фото (НЕ как главное)
     await db.add_user_photo(
         user_id=user_id,
@@ -221,8 +183,8 @@ async def process_add_photo(message: Message, state: FSMContext, db: Database):
     
     # Показываем успешное сообщение и возвращаем к профилю
     await message.answer(
-        "✅ <b>Фото добавлено!</b>\n\n"
-        "Фотография успешно добавлена в твою анкету.",
+        f"{validation_message}\n\n"
+        f"Фотография успешно добавлена в твою анкету.",
         parse_mode="HTML",
         reply_markup=get_back_to_profile_keyboard()
     )
